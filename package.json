@@ -1,0 +1,20 @@
+{
+  "name": "everipixel",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "next",
+    "build": "next build",
+    "start": "next start"
+  },
+  "author": "",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "next": "^7.0.1",
+    "pizzicato": "^0.6.3",
+    "react": "^16.5.2",
+    "react-dom": "^16.5.2",
+    "react-virtualized": "^9.20.1"
+  }
+}
