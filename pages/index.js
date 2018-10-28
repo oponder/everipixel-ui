@@ -46,6 +46,28 @@ let multiplyPixels = (ctx, factor) => {
   ctx.putImageData(imageData, 0, 0);
 }
 
+let multiplyPixel = (ctx, x, y, factor) => {
+  // Brighten the canvas
+  // get raw pixel values
+  var imageData = ctx.getImageData(x, y, 1, 1);
+  var pixels = imageData.data;
+  // modify each pixel
+  for(var i = 0; i < pixels.length; i += 4) {
+     // red is pixels[i];
+     // green is pixels[i + 1];
+     // blue is pixels[i + 2];
+     // alpha is pixels[i + 3];
+     // all values are integers between 0 and 255
+     // do with them whatever you like. Here we are reducing the color volume to 75%
+     // without affecting the alpha channel
+     pixels[i] = pixels[i] * factor;
+     pixels[i+1] = pixels[i+1] * factor;
+     pixels[i+2] = pixels[i+2] * factor;
+  }
+  // write modified pixels back to canvas
+  ctx.putImageData(imageData, x, y);
+}
+
 export class Index extends Component {
   constructor(props) {
     super(props);
@@ -64,6 +86,12 @@ export class Index extends Component {
     }
   }
 
+  canvasReady = (ctx) => {
+    console.log(ctx);
+    this.ctx = ctx;
+    this.imageData = ctx.getImageData(0,0,WIDTH,HEIGHT);
+  }
+
   componentDidMount(){
     document.addEventListener("keydown", this.onEsc, false);
   }
@@ -78,7 +106,10 @@ export class Index extends Component {
     }
   }
 
-  clearSelection = (ctx, evt) => {
+  clearSelection = () => {
+    // Return canvas to original brightness.
+    this.ctx.putImageData(this.imageData, 0,0)
+
     this.setState({
       selection: {}
     })
@@ -128,9 +159,19 @@ export class Index extends Component {
       }
     } else {
       let mousePos = getMousePos(ctx, evt);
+
       this.setState({
         currentMousePosition: mousePos
-      })
+      });
+
+      if (this.state.hovering) {
+        // multiplyPixel(ctx, this.state.currentMousePosition.x, this.state.currentMousePosition.y, 2)
+      } else {
+        multiplyPixels(ctx, 0.5)
+        this.setState({
+          hovering: true
+        });
+      }
     }
   }
 
@@ -142,10 +183,19 @@ export class Index extends Component {
     this.setState({
       currentMousePosition: {x:0, y:0}
     })
+
+    if (this.state.hovering) {
+      ctx.putImageData(this.imageData, 0, 0);
+      this.setState({
+        hovering: false
+      });
+    }
   }
 
   mouseDown = (ctx, evt) => {
-    this.imageData = ctx.getImageData(0,0,WIDTH,HEIGHT);
+    // Return canvas to original brightness.
+    ctx.putImageData(this.imageData, 0,0)
+
     this.selectionCanvas = document.createElement("canvas");
     this.selectionCanvas.width = WIDTH;
     this.selectionCanvas.height = HEIGHT;
@@ -182,9 +232,6 @@ export class Index extends Component {
 
       let selectionCtx = this.refs.selectionCanvas.getContext("2d");
       selectionCtx.clearRect(0, 0, 100, 100);
-
-      // Return canvas to original brightness.
-      ctx.putImageData(this.imageData, 0,0)
 
       if (width !== 0 && height !== 0) {
         // Grab the selected region and put it in the selection preview.
@@ -243,7 +290,7 @@ export class Index extends Component {
         key={key}
         style={style}
       >
-        {this.selectedPixels()[index]}
+        Pixel #{this.selectedPixels()[index]}
       </div>
     )
   }
@@ -276,6 +323,7 @@ export class Index extends Component {
       <Canvas
         width={WIDTH}
         height={HEIGHT}
+        onReady={this.canvasReady}
         onMouseOut={this.mouseOut}
         onMouseMove={this.mouseMove}
         onMouseDown={this.mouseDown}

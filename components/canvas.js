@@ -20,8 +20,12 @@ export class Canvas extends Component {
     var img1 = new Image();
     img1.src = '/static/pixelart.jpg';
 
-    img1.onload = function () {
+    img1.onload = () => {
       ctx.drawImage(img1, 0, 0);
+
+      if (this.props.onReady) {
+        this.props.onReady(this.ctx);
+      }
     };
 
     // this.initRatio();

@@ -11,10 +11,16 @@
   "author": "",
   "license": "UNLICENSED",
   "dependencies": {
+    "@feathersjs/feathers": "^3.2.3",
+    "evtjs": "^4.4.4",
     "next": "^7.0.1",
     "pizzicato": "^0.6.3",
     "react": "^16.5.2",
     "react-dom": "^16.5.2",
     "react-virtualized": "^9.20.1"
+  },
+  "devDependencies": {
+    "eslint": "^5.7.0",
+    "eslint-plugin-react": "^7.11.1"
   }
 }

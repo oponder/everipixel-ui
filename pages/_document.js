@@ -18,12 +18,6 @@ export default class MyDocument extends Document {
               margin: 0;
               padding: 0;
               background-color: #000;
-                -webkit-touch-callout: none; /* iOS Safari */
-    -webkit-user-select: none; /* Safari */
-     -khtml-user-select: none; /* Konqueror HTML */
-       -moz-user-select: none; /* Firefox */
-        -ms-user-select: none; /* Internet Explorer/Edge */
-            user-select: none;
             }
 
             body {
@@ -42,6 +36,46 @@ export default class MyDocument extends Document {
               filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#000000', endColorstr='#001b28',GradientType=0 ); /* IE6-9 */
             }
 
+            button {
+              border: 1px solid #001b28;
+              font-family: Bubbledot Fine W01 Pos;
+              font-size: 16px;
+              padding: 10px 20px;
+              border-radius: 5px;
+              margin-right: 10px;
+              cursor: pointer;
+            }
+
+            button.primary:hover {
+              background-color: #B8770D;
+              border: 1px solid #fca311;
+            }
+
+            button.primary:active {
+              background-color: #8A590A;
+              outline: none;
+            }
+
+            button.primary:focus{
+              box-shadow: 0px 0px 10px #fca311;
+              outline: none;
+            }
+
+            button.primary {
+              background-color: #fca311;
+              color: #fff;
+              text-shadow: 2px 2px #222;
+            }
+
+            button.secondary {
+              background-color: #888;
+            }
+
+            button.secondary:active, button.secondary:focus {
+              outline: none;
+              box-shadow: 0px 0px 10px #fca311;
+            }
+
             .clear {
               clear: both;
             }
@@ -49,6 +83,19 @@ export default class MyDocument extends Document {
             h1 {
               margin-top: 0px;
             }
+
+            .pixel {
+              box-sizing: border-box;
+            }
+
+            .pixel:hover {
+              border: 1px solid #555;
+            }
+
+            .pixel.selected {
+              border: 1px solid #F55;
+            }
+
             `}
           </style>
         </Head>
