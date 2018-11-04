@@ -1,17 +1,29 @@
 import React, { Component } from 'react';
+import Header from '../components/header';
 import { Canvas } from '../components/canvas';
 import Pizzicato  from 'pizzicato';
 import { List } from 'react-virtualized';
 import EVTWrapper from '../lib/evt';
 
+const feathers = require('@feathersjs/feathers');
+const socketio = require('@feathersjs/socketio-client');
+const io = require('socket.io-client');
+
 const WIDTH = 50;
 const HEIGHT = 50;
 const SCALE = 10;
 
-let publicKey = "EVT4x8iBHKikKyqJcU6M7qxDRy93kCNAiTHHQtaDDTwJ76wj2mwiq";
-let privateKey = "5KfPZG1DyCWvXnBKtFqRZtrcxM2r9YWmW5v7BeGT6EykBPnxqwe";
+const PALETTE = [
+                 '#FFFFFF', '#E4E4E4', '#888888', '#222222',
+                 '#FFA7D1', '#E50000', '#E59500', '#A06A42',
+                 '#E5D900', '#94E044', '#02BE01', '#00D3DD',
+                 '#0083C7', '#0000EA', '#CF6EE4', '#820080',
+                ];
+
+// let privateKey = "5KfPZG1DyCWvXnBKtFqRZtrcxM2r9YWmW5v7BeGT6EykBPnxqwe";
 
 var truncate = function (fullStr, strLen, separator) {
+  if (!fullStr) { return undefined };
   if (fullStr.length <= strLen) return fullStr;
 
   separator = separator || '...';
@@ -37,18 +49,54 @@ export class Index extends Component {
       this.dragFailSound = new Pizzicato.Sound("/static/dragfail.mp3");
     }
 
-    this.EVTWrapper = new EVTWrapper({publicKey, privateKey});
+    this.EVTWrapper = new EVTWrapper({});
 
     this.state = {
       dragging: false,
       selection: {},
       currentMousePosition: {x: 0, y: 0, id: 0},
       pixels: this.initializePixels(),
+      selectedColor: '',
     }
   }
 
   componentDidMount(){
     document.addEventListener("keydown", this.onEsc, false);
+
+
+    (async () => {
+      let response = await fetch('http://localhost:3030/board', {
+      headers: {
+        "Content-Type": "application/json"
+      },
+      method: "GET"
+      });
+
+      let body = await response.text();
+      body = JSON.parse(body);
+
+      body.board.map((pixel, i) => {
+        if (pixel) {
+          this.state.pixels[i].color = pixel;
+        } else {
+          this.state.pixels[i].color = "#000";
+        }
+      });
+
+      this.pixels = undefined;
+      this.forceUpdate();
+
+    })();
+
+    const socket = io('http://localhost:3030');
+    const app = feathers();
+    app.configure(socketio(socket));
+
+    app.service('board').on('status', message => {
+      this.state.pixels[message.id].color = message.color;
+      this.pixels = undefined;
+      this.forceUpdate();
+    });
   }
 
   componentWillUnmount(){
@@ -82,7 +130,8 @@ export class Index extends Component {
     this.state.selection.selected = false;
 
     this.setState({
-      selection: pixel
+      selection: pixel,
+      selectedColor: pixel.color
     })
 
     pixel.selected = true;
@@ -99,10 +148,25 @@ export class Index extends Component {
   refreshPixel = async (pixel) => {
     var {err, response} = await this.EVTWrapper.getToken("pixeltoken", pixel.id.toString());
     if (err != null && err.name === "tokendb_key_not_found") {
-      console.log(pixel.id.toString() + " is available");
       pixel.available = true;
+      pixel.color = "#000";
     } else if (err === null) {
+      let colorMetas = response.metas
+                      .filter(meta => meta.key.startsWith("color"))
+                      .sort((a, b) => {
+                        let bN = parseInt(b.key.replace("color", ""));
+                        let aN = parseInt(a.key.replace("color", ""));
+                        if (isNaN(bN)) {
+                          return -1;
+                        }
+                        return bN - aN;
+                      });
+
       pixel.owner = response.owner[0];
+
+      if (colorMetas[0]) {
+        pixel.color = colorMetas[0].value;
+      }
     }
   }
 
@@ -111,7 +175,7 @@ export class Index extends Component {
 
     for(var y = 0; y < HEIGHT; y += 1) {
       for(var x = 0; x < WIDTH; x += 1) {
-        var pixel = {x, y, color: "#000", id: (y*WIDTH)+x };
+        var pixel = {x, y, color: "#000", id: ((y*WIDTH)+x).toString() };
         pixels.push(pixel);
       }
     }
@@ -124,12 +188,11 @@ export class Index extends Component {
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({"id": pixel.id, "owner": publicKey}),
+      body: JSON.stringify({"id": pixel.id, "owner": this.EVTWrapper.publicKey}),
       method: "POST"
     });
 
     let body = await response.text();
-    console.log(body);
 
     if (response.status === 201) {
       await this.refreshPixel(pixel);
@@ -142,13 +205,67 @@ export class Index extends Component {
     }
   }
 
+  selectColor = async (color) => {
+    this.state.selection.color = color;
+    this.pixels = undefined; // force redraw
+    this.setState({
+      selectedColor: color
+    });
+
+
+    var {err, response} = this.commitColor(color, this.state.selection.id);
+    if (err !== null) {
+      // Unable to set the color.
+    }
+  }
+
+  commitColor = async (color, pixelID) => {
+    var {err, response} = await this.EVTWrapper.getToken("pixeltoken", pixelID);
+    if (err !== null) {
+      return {err, response}
+    }
+
+    let colorMetas = response.metas
+                    .filter(meta => meta.key.startsWith("color"))
+                    .map(meta => parseInt(meta.key.replace("color", "")))
+                    .filter(index => !isNaN(index))
+                    .sort((a, b) => b - a);
+
+    let nextColorIndex = isNaN(colorMetas[0]+1) ? 0 : colorMetas[0]+1;
+
+    var {err, response} = await this.EVTWrapper.addMeta("pixeltoken", this.state.selection.id, 'color'+nextColorIndex, color);
+    if (err != null) {
+      // Error setting meta.
+    }
+
+    // Let hte server refresh it's state too.
+    await fetch('http://localhost:3030/board/'+pixelID.toString(), {
+      headers: {
+        "Content-Type": "application/json"
+      },
+      method: "GET"
+    });
+
+    return {err, response}
+  }
+
+  handleLogin = (privateKey) => {
+    this.EVTWrapper = new EVTWrapper({privateKey});
+    this.forceUpdate();
+  }
+
+  handleLogout = () => {
+    this.EVTWrapper = new EVTWrapper({});
+    this.forceUpdate();
+  }
+
   render() {
     this.pixels = this.pixels || this.state.pixels.map((pixel) => {
       return <div
         className={'pixel' + (pixel.selected ? ' selected' : '')}
         key={pixel.id}
         style={{
-          backgroundColor: pixel.owner ? "#f00" : pixel.color,
+          backgroundColor: pixel.color,
           width:SCALE+"px",
           height: SCALE+"px",
           float: "left",
@@ -157,35 +274,17 @@ export class Index extends Component {
         }}
         onMouseEnter={this.setMousePos.bind(this,pixel)}
         onClick={this.selectPixel.bind(this,pixel)}
-      >
-
-      </div>
-    })
+      ></div>
+    });
 
 
     return <div className="main">
-      <div className="header">
-        <h1>everi<span>Pixel</span></h1>
-        <style jsx>
-          {`
-            h1 {
-              color: #858585;
-              font-size: 24px;
-              margin: 0;
-            }
-
-            h1 span {
-              color: #fff
-            }
-
-            .header {
-              border-bottom: 1px solid #222222;
-              padding: 20px;
-              margin-bottom: 20px;
-            }
-          `}
-        </style>
-      </div>
+      <Header
+        onLogin={this.handleLogin}
+        onLogout={this.handleLogout}
+        loggedIn={truncate(this.EVTWrapper.publicKey, 25, "...")}
+        EVTWrapper={this.EVTWrapper}
+      />
 
       <div className="pixels">
         {
@@ -255,14 +354,34 @@ export class Index extends Component {
                 <p>You can claim it for yourself and set it to any color you want!</p>
                 <p>You'll be the true owner of this little pixel, nobody can take it from you.</p>
 
-                <button className="primary" onClick={this.claimPixel.bind(this, this.state.selection)}>CLAIM PIXEL</button>
+                {
+                  this.EVTWrapper.publicKey ?
+                    <button className="primary" onClick={this.claimPixel.bind(this, this.state.selection)}>CLAIM PIXEL</button>
+                  :
+                    <div>Click login above or create account to claim this pixel!<br/><br/></div>
+                }
+
                 <button className="secondary" onClick={this.clearSelection}>DESELECT [ESC]</button>
               </div>
             :
-              this.state.selection.owner === publicKey ?
-                "You own this pixel!"
+              this.state.selection.owner === this.EVTWrapper.publicKey ?
+                <div>
+                  You own this pixel!
+                  <div className="palette">
+                    {PALETTE.map((color) => {
+                      var className = 'color-picker';
+                      if (color === this.state.selectedColor) {
+                        className += ' selected'
+                      }
+                      return <div key={color} className={className} style={{backgroundColor:color}} onClick={this.selectColor.bind(this, color)}></div>
+                    })}
+                  </div>
+                </div>
               :
-                <button className="secondary" onClick={this.clearSelection}>DESELECT [ESC]</button>
+                <div>
+                  {this.EVTWrapper.publicKey ? "Someone else owns this pixel." : "You are not logged in"} <br /><br />
+                  <button className="secondary" onClick={this.clearSelection}>DESELECT [ESC]</button>
+                </div>
           :
           ""
         }
@@ -287,6 +406,25 @@ export class Index extends Component {
               float: left;
               margin-right: 20px;
               margin-bottom: 10px;
+            }
+
+            .color-picker {
+              width: 20px;
+              height: 20px;
+              float: left;
+              display: box;
+              cursor: pointer;
+              margin-right: 2px;
+              opacity: 0.8;
+            }
+
+            .color-picker:hover, .color-picker.selected {
+              border-bottom: 4px solid #fff;
+              opacity: 1;
+            }
+
+            .palette {
+              margin-top: 10px
             }
 
             .selection {

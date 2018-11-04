@@ -96,6 +96,67 @@ export default class MyDocument extends Document {
               border: 1px solid #F55;
             }
 
+            .pullRight {
+              display: inline;
+              float: right;
+            }
+
+            h3 {
+              margin-top: 0px;
+            }
+
+            .header {
+              border-bottom: 1px solid #222222;
+              padding: 20px;
+              margin-bottom: 20px;
+            }
+
+            .user {
+              color: #ccc;
+              font-size: 16px;
+              padding-top: 5px;
+              position: relative;
+            }
+
+            .user a {
+              cursor: pointer;
+              color: #999;
+            }
+
+            .user a:hover {
+              color: #fff
+            }
+
+            .createAccount {
+              position: absolute;
+              top: 30px;
+              right: 0px;
+              background-color: #000;
+              border: 1px solid #222222;
+              padding: 10px;
+            }
+
+            .overlayWindow {
+              width: 400px;
+              box-shadow: 0px 0px 25px #555;
+            }
+
+            label {
+              display: block;
+            }
+
+            input {
+              display: block;
+              width: 80%;
+              padding: 8px;
+              font-size: 16px;
+              font-family: Bubbledot Fine W01 Pos;
+              margin: 10px 0px;
+              background-color: #333;
+              border: 1px solid #999;
+              color: #eee;
+            }
+
             `}
           </style>
         </Head>
