@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: everipixel-ui
+  namespace: everipixel
+  labels:
+    app: everipixel-ui
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: everipixel-ui
+  template:
+    metadata:
+      labels:
+        app: everipixel-ui
+    spec:
+      containers:
+      - name: everipixel-ui
+        image: gcr.io/everipixel/everipixel-ui:latest
+        ports:
+        - containerPort: 8000
