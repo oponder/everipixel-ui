@@ -3,9 +3,9 @@ import { Canvas } from '../components/canvas';
 import Pizzicato  from 'pizzicato';
 import { List } from 'react-virtualized';
 
-const WIDTH = 50;
-const HEIGHT = 50;
-const SCALE = 10;
+const WIDTH = 1000;
+const HEIGHT = 1000;
+const SCALE = 0.5;
 
 let getMousePos = (ctx, evt) => {
   var rect = ctx.canvas.getBoundingClientRect();

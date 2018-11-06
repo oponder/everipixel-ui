@@ -462,9 +462,33 @@ export class Index extends Component {
           </style>
 
         </div>
-        <div className="footer">
+        <div className="caption">
         <span>Attention:</span> everiPixel is a prototype running against a self hosted everiToken blockchain.
         the state of the board could be cleared at any time.
+        </div>
+
+        <div className="explanation">
+          <h2>What is this?</h2>
+          <p>everiPixel is a demonstration of the <a href="https://everitoken.io/">everiToken</a> blockchain and its <a href="https://www.everitoken.io/developers/key_concepts/non-fungible_tokens_and_domains">Non Fungible Token</a> feature.</p>
+          <p>Above is a canvas of 50x50 pixels, each of which can be owned and transfered individually.</p>
+          <p>Currently pixels can be claimed freely by anyone and set to any color you want.</p>
+          <p>Transfering pixels to someone else is possible, but requires knowledge of everitoken's API. I do have plans to facilitate that via the UI in a future release.</p>
+          <p>It is currently running against a self hosted single node of the blockchain at 35.240.176.101. Though the intention is to move it to the mainnet eventually.</p>
+
+
+          <h2>Why did you make this?</h2>
+          <p>This project was made to help myself and others understand features of the blockchain better.</p>
+          <p>I always learn best when I have a hands on way to play with the concepts I am learning. Hopefully this also helps others in that way.</p>
+
+          <p>I made it for everiToken's global hackathon in 2018.</p>
+          <p>It was submitted to the Open Challenge, which was to "Build anything related to the everiToken public chain."</p>
+
+          <h2>What is the future for this project?</h2>
+          <p>Currently, you'd have to be a bit technical and know everiToken's API before you would be able to transfer a pixel to someone else.</p>
+          <p>So I plan to implement ways to easily transfer, sell, and auction pixels</p>
+
+          <p>The canvas itself can be improved as well, my ambition is to get a 1000x1000 pixel canvas, though that might require
+          some more cooperation with the everiToken team.</p>
         </div>
       </div>
     </div>

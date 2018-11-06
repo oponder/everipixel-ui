@@ -34,6 +34,7 @@ export default class MyDocument extends Document {
               background: -webkit-linear-gradient(top, #000000 0%,#001b28 100%); /* Chrome10-25,Safari5.1-6 */
               background: linear-gradient(to bottom, #000000 0%,#001b28 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
               filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#000000', endColorstr='#001b28',GradientType=0 ); /* IE6-9 */
+              padding-bottom: 200px;
             }
 
             button {
@@ -157,19 +158,33 @@ export default class MyDocument extends Document {
               color: #eee;
             }
 
-            .footer {
+            .caption {
               color: #999;
               font-size: 16px;
               width: 500px;
             }
 
-            .footer span {
+            .caption span {
               color: #fff;
             }
 
             .main {
               width: 912px;
               margin: auto;
+            }
+
+            .explanation {
+              font-size: 16px;
+              margin-top: 50px;
+              color: #999;
+              border-top: 1px solid #333;
+              padding-top: 20px;
+            }
+
+
+            .explanation h2 {
+              color: #ddd;
+              margin-top: 40px;
             }
 
             `}
