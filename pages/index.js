@@ -293,177 +293,180 @@ export class Index extends Component {
         EVTWrapper={this.EVTWrapper}
       />
 
-      <div className="pixels">
-        {
-          this.pixels
-        }
-        <style jsx>
-          {`
-            .pixels {
-              float: left;
-              margin-right: 10px;
-              width: ${SCALE * WIDTH}px;
-              border: 1px solid #222;
-              margin-left: 20px;
-            }
-          `}
-        </style>
-      </div>
-
-      <div className="controls">
-        <div className={"selection" + (this.state.selection.x !== undefined ? " selected" : "")} >
-
-          <h2>
-            {
-              (this.state.selection.x !== undefined) ?
-              <div>
-                Pixel #{this.state.selection.id}
-              </div>
-              :
-              <span>Pixel #{this.state.currentMousePosition.id}&nbsp;</span>
-            }
-          </h2>
+      <div className="main">
+        <div className="pixels">
           {
-            (this.state.selection.x !== undefined) ?
-              <div>({this.state.selection.x},{this.state.selection.y})</div>
-              :
-            <div>({this.state.currentMousePosition.x},{this.state.currentMousePosition.y})</div>
+            this.pixels
           }
-
-          {
-            (this.state.selection.x !== undefined) ?
-            <div className="owner">
-              <br/>
-              <span>
-                {
-                  this.state.selection.owner === undefined ?
-                    <div>
-
-                    </div>
-                    :
-                    "Owner: " + truncate(this.state.selection.owner, 25, "...")
-                }
-              </span>
-            </div>
-            :
-            ''
-          }
+          <style jsx>
+            {`
+              .pixels {
+                float: left;
+                margin-right: 10px;
+                width: ${SCALE * WIDTH}px;
+                border: 1px solid #222;
+                margin-bottom: 20px;
+              }
+            `}
+          </style>
         </div>
 
-        <hr/>
-        {
-          this.state.selection.color ?
-            this.state.selection.owner === undefined ?
-              <div className="detail-box">
-                <h2>Nobody owns this pixel yet!</h2>
-                <p>You can claim it for yourself and set it to any color you want!</p>
-                <p>You'll be the true owner of this little pixel, nobody can take it from you.</p>
+        <div className="controls">
+          <div className={"selection" + (this.state.selection.x !== undefined ? " selected" : "")} >
 
-                {
-                  this.EVTWrapper.publicKey ?
-                    <button className="primary" onClick={this.claimPixel.bind(this, this.state.selection)}>CLAIM PIXEL</button>
-                  :
-                    <div>Click login above or create account to claim this pixel!<br/><br/></div>
-                }
-
-                <button className="secondary" onClick={this.clearSelection}>DESELECT [ESC]</button>
-              </div>
-            :
-              this.state.selection.owner === this.EVTWrapper.publicKey ?
+            <h2>
+              {
+                (this.state.selection.x !== undefined) ?
                 <div>
-                  You own this pixel!
-                  <div className="palette">
-                    {PALETTE.map((color) => {
-                      var className = 'color-picker';
-                      if (color === this.state.selectedColor) {
-                        className += ' selected'
-                      }
-                      return <div key={color} className={className} style={{backgroundColor:color}} onClick={this.selectColor.bind(this, color)}></div>
-                    })}
-                  </div>
+                  Pixel #{this.state.selection.id}
                 </div>
+                :
+                <span>Pixel #{this.state.currentMousePosition.id}&nbsp;</span>
+              }
+            </h2>
+            {
+              (this.state.selection.x !== undefined) ?
+                <div>({this.state.selection.x},{this.state.selection.y})</div>
+                :
+              <div>({this.state.currentMousePosition.x},{this.state.currentMousePosition.y})</div>
+            }
+
+            {
+              (this.state.selection.x !== undefined) ?
+              <div className="owner">
+                <br/>
+                <span>
+                  {
+                    this.state.selection.owner === undefined ?
+                      <div>
+
+                      </div>
+                      :
+                      "Owner: " + truncate(this.state.selection.owner, 25, "...")
+                  }
+                </span>
+              </div>
               :
-                <div>
-                  {this.EVTWrapper.publicKey ? "Someone else owns this pixel." : "You are not logged in"} <br /><br />
+              ''
+            }
+          </div>
+
+          <hr/>
+          {
+            this.state.selection.color ?
+              this.state.selection.owner === undefined ?
+                <div className="detail-box">
+                  <h2>Nobody owns this pixel yet!</h2>
+                  <p>You can claim it for yourself and set it to any color you want!</p>
+                  {
+                    this.EVTWrapper.publicKey ?
+                      <button className="primary" onClick={this.claimPixel.bind(this, this.state.selection)}>CLAIM PIXEL</button>
+                    :
+                      <div>Click login above or create account to claim this pixel!<br/><br/></div>
+                  }
+
                   <button className="secondary" onClick={this.clearSelection}>DESELECT [ESC]</button>
                 </div>
-          :
-          ""
-        }
+              :
+                this.state.selection.owner === this.EVTWrapper.publicKey ?
+                  <div>
+                    You own this pixel!
+                    <div className="palette">
+                      {PALETTE.map((color) => {
+                        var className = 'color-picker';
+                        if (color === this.state.selectedColor) {
+                          className += ' selected'
+                        }
+                        return <div key={color} className={className} style={{backgroundColor:color}} onClick={this.selectColor.bind(this, color)}></div>
+                      })}
+                    </div>
+                  </div>
+                :
+                  <div>
+                    {this.EVTWrapper.publicKey ? "Someone else owns this pixel." : "You are not logged in"} <br /><br />
+                    <button className="secondary" onClick={this.clearSelection}>DESELECT [ESC]</button>
+                  </div>
+            :
+            ""
+          }
 
-        <style jsx>
-          {`
-            .controls {
-              float: left;
-              color: #fff;
-              font-size: 16px;
-              width: 400px;
-            }
+          <style jsx>
+            {`
+              .controls {
+                float: left;
+                color: #fff;
+                font-size: 16px;
+                width: 400px;
+              }
 
-            .selected {
-              color: #fff !important
-            }
+              .selected {
+                color: #fff !important
+              }
 
-            .selectionPreview {
-              width: 100px;
-              height: 100px;
-              border: 1px solid #222222;
-              float: left;
-              margin-right: 20px;
-              margin-bottom: 10px;
-            }
+              .selectionPreview {
+                width: 100px;
+                height: 100px;
+                border: 1px solid #222222;
+                float: left;
+                margin-right: 20px;
+                margin-bottom: 10px;
+              }
 
-            .color-picker {
-              width: 20px;
-              height: 20px;
-              float: left;
-              display: box;
-              cursor: pointer;
-              margin-right: 2px;
-              opacity: 0.8;
-            }
+              .color-picker {
+                width: 20px;
+                height: 20px;
+                float: left;
+                display: box;
+                cursor: pointer;
+                margin-right: 2px;
+                opacity: 0.8;
+              }
 
-            .color-picker:hover, .color-picker.selected {
-              border-bottom: 4px solid #fff;
-              opacity: 1;
-            }
+              .color-picker:hover, .color-picker.selected {
+                border-bottom: 4px solid #fff;
+                opacity: 1;
+              }
 
-            .palette {
-              margin-top: 10px
-            }
+              .palette {
+                margin-top: 10px
+              }
 
-            .selection {
-              color: #858585;
-            }
+              .selection {
+                color: #858585;
+              }
 
-            h2 {
-              font-size: 16px;
-              margin: 0;
-              margin-bottom: 10px;
-            }
+              h2 {
+                font-size: 16px;
+                margin: 0;
+                margin-bottom: 10px;
+              }
 
-            hr {
-              clear: both;
-              border-color: #222
-            }
+              hr {
+                clear: both;
+                border-color: #222
+              }
 
-            .owner span {
+              .owner span {
 
-            }
+              }
 
-            .detail-box {
-              font-family: system, -apple-system, system-ui;
-              color: #aaa;
-            }
+              .detail-box {
+                font-family: system, -apple-system, system-ui;
+                color: #aaa;
+              }
 
-            .detail-box h2 {
-              color: #fff
-            }
-          `}
-        </style>
+              .detail-box h2 {
+                color: #fff
+              }
+            `}
+          </style>
 
+        </div>
+        <div className="footer">
+        <span>Attention:</span> everiPixel is a prototype running against a self hosted everiToken blockchain.
+        the state of the board could be cleared at any time.
+        </div>
       </div>
-
     </div>
   }
 }

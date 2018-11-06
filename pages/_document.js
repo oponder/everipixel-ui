@@ -157,6 +157,21 @@ export default class MyDocument extends Document {
               color: #eee;
             }
 
+            .footer {
+              color: #999;
+              font-size: 16px;
+              width: 500px;
+            }
+
+            .footer span {
+              color: #fff;
+            }
+
+            .main {
+              width: 912px;
+              margin: auto;
+            }
+
             `}
           </style>
         </Head>
