@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react';
+import copy from 'copy-to-clipboard';
 
 export default function Header(props) {
   let [privateKey, setPrivateKey] = useState("");
   let [createAccountToggle, setCreateAccountToggle] = useState(false);
   let [createAccountPage, setCreateAccountPage] = useState(0);
   let [loginToggle, setLoginToggle] = useState(false);
+  let [copied, setCopied] = useState(false);
 
   function toggleCreateAccount() {
     setLoginToggle(false);
     setCreateAccountPage(0);
+    setCopied(false);
     setCreateAccountToggle(!createAccountToggle);
   }
 
@@ -21,10 +24,16 @@ export default function Header(props) {
     (async () => {
       let privateKey = await props.EVTWrapper.randomPrivateKey();
       props.onLogin(privateKey);
+      setPrivateKey(privateKey);
       setCreateAccountPage(2);
     })();
 
     setCreateAccountPage(1);
+  }
+
+  function copyToClipboard() {
+    copy(privateKey);
+    setCopied(true);
   }
 
   function showCreateAccountPage() {
@@ -55,9 +64,11 @@ export default function Header(props) {
       return <div>
         <h3>Private Key Created! <a onClick={toggleCreateAccount} className="pullRight close">[X]</a></h3>
         <p>You are now logged in.</p>
-        <p>Copy your private key.</p>
-        <p>Set an identity</p>
-        <p>Close this window</p>
+        <p>Please copy your private key to the clipboard and save it somewhere.</p>
+        {
+          copied ? "Copied to clipboard!" : <button class="primary" onClick={copyToClipboard}>Copy your private key to the clipboard.</button>
+        }
+
       </div>
     }
   }
