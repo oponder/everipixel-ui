@@ -1,72 +1,43 @@
 import React, { Component } from 'react';
+import Header from '../components/header';
 import { Canvas } from '../components/canvas';
 import Pizzicato  from 'pizzicato';
 import { List } from 'react-virtualized';
+import EVTWrapper from '../lib/evt';
+
+const feathers = require('@feathersjs/feathers');
+const socketio = require('@feathersjs/socketio-client');
+const io = require('socket.io-client');
 
 const WIDTH = 50;
 const HEIGHT = 50;
 const SCALE = 10;
 
-let getMousePos = (ctx, evt) => {
-  var rect = ctx.canvas.getBoundingClientRect();
+const SERVERURL = "http://35.240.173.157:8000"
+const EVTIP = "35.240.176.101"
 
-  var x = Math.floor((evt.clientX - rect.left) / SCALE);
-  var y = Math.floor((evt.clientY - rect.top) / SCALE);
+const PALETTE = [
+                 '#FFFFFF', '#E4E4E4', '#888888', '#222222',
+                 '#FFA7D1', '#E50000', '#E59500', '#A06A42',
+                 '#E5D900', '#94E044', '#02BE01', '#00D3DD',
+                 '#0083C7', '#0000EA', '#CF6EE4', '#820080',
+                ];
 
-  // Ensure we never get numbers out of the bounds of the canvas.
-  // This can happen if the mouse moves quickly off the canvas.
-  x = Math.min(WIDTH-1, x);
-  y = Math.min(HEIGHT-1, y);
+var truncate = function (fullStr, strLen, separator) {
+  if (!fullStr) { return undefined };
+  if (fullStr.length <= strLen) return fullStr;
 
-  x = Math.max(0, x);
-  y = Math.max(0, y);
+  separator = separator || '...';
 
-  return {x, y};
+  var sepLen = separator.length,
+      charsToShow = strLen - sepLen,
+      frontChars = Math.ceil(charsToShow/2),
+      backChars = Math.floor(charsToShow/2);
+
+  return fullStr.substr(0, frontChars) +
+         separator +
+         fullStr.substr(fullStr.length - backChars);
 };
-
-let multiplyPixels = (ctx, factor) => {
-  // Brighten the canvas
-  // get raw pixel values
-  var imageData = ctx.getImageData(0, 0, WIDTH, HEIGHT);
-  var pixels = imageData.data;
-  // modify each pixel
-  for(var i = 0; i < pixels.length; i += 4) {
-     // red is pixels[i];
-     // green is pixels[i + 1];
-     // blue is pixels[i + 2];
-     // alpha is pixels[i + 3];
-     // all values are integers between 0 and 255
-     // do with them whatever you like. Here we are reducing the color volume to 75%
-     // without affecting the alpha channel
-     pixels[i] = pixels[i] * factor;
-     pixels[i+1] = pixels[i+1] * factor;
-     pixels[i+2] = pixels[i+2] * factor;
-  }
-  // write modified pixels back to canvas
-  ctx.putImageData(imageData, 0, 0);
-}
-
-let multiplyPixel = (ctx, x, y, factor) => {
-  // Brighten the canvas
-  // get raw pixel values
-  var imageData = ctx.getImageData(x, y, 1, 1);
-  var pixels = imageData.data;
-  // modify each pixel
-  for(var i = 0; i < pixels.length; i += 4) {
-     // red is pixels[i];
-     // green is pixels[i + 1];
-     // blue is pixels[i + 2];
-     // alpha is pixels[i + 3];
-     // all values are integers between 0 and 255
-     // do with them whatever you like. Here we are reducing the color volume to 75%
-     // without affecting the alpha channel
-     pixels[i] = pixels[i] * factor;
-     pixels[i+1] = pixels[i+1] * factor;
-     pixels[i+2] = pixels[i+2] * factor;
-  }
-  // write modified pixels back to canvas
-  ctx.putImageData(imageData, x, y);
-}
 
 export class Index extends Component {
   constructor(props) {
@@ -79,21 +50,58 @@ export class Index extends Component {
       this.dragFailSound = new Pizzicato.Sound("/static/dragfail.mp3");
     }
 
+    this.EVTWrapper = new EVTWrapper({});
+
     this.state = {
       dragging: false,
       selection: {},
-      currentMousePosition: {x: 0, y: 0},
+      currentMousePosition: {x: 0, y: 0, id: 0},
+      pixels: this.initializePixels(),
+      selectedColor: '',
     }
-  }
-
-  canvasReady = (ctx) => {
-    console.log(ctx);
-    this.ctx = ctx;
-    this.imageData = ctx.getImageData(0,0,WIDTH,HEIGHT);
   }
 
   componentDidMount(){
     document.addEventListener("keydown", this.onEsc, false);
+    let privateKey =  localStorage.getItem('login');
+
+    if (privateKey) {
+      this.EVTWrapper = new EVTWrapper({privateKey});
+    }
+
+    (async () => {
+      let response = await fetch(SERVERURL + '/board', {
+      headers: {
+        "Content-Type": "application/json"
+      },
+      method: "GET"
+      });
+
+      let body = await response.text();
+      body = JSON.parse(body);
+
+      body.board.map((pixel, i) => {
+        if (pixel) {
+          this.state.pixels[i].color = pixel;
+        } else {
+          this.state.pixels[i].color = "#000";
+        }
+      });
+
+      this.pixels = undefined;
+      this.forceUpdate();
+
+    })();
+
+    const socket = io(SERVERURL);
+    const app = feathers();
+    app.configure(socketio(socket));
+
+    app.service('board').on('status', message => {
+      this.state.pixels[message.id].color = message.color;
+      this.pixels = undefined;
+      this.forceUpdate();
+    });
   }
 
   componentWillUnmount(){
@@ -107,268 +115,281 @@ export class Index extends Component {
   }
 
   clearSelection = () => {
-    // Return canvas to original brightness.
-    this.ctx.putImageData(this.imageData, 0,0)
-
+    this.state.selection.selected = false;
+    this.pixels = undefined; //
     this.setState({
-      selection: {}
+      selection: {},
+      currentMousePosition: {x: 0, y: 0, id: 0},
     })
   }
 
-  mouseMove = (ctx, evt, dragging) => {
-    if (this.state.dragging) {
-      let mousePos = getMousePos(ctx, evt);
-
-      var x1 = this.state.selection.x1;
-      var y1 = this.state.selection.y1;
-      var x2 = mousePos.x;
-      var y2 = mousePos.y;
-
-      if (x1 > x2) {
-        x1 = x2;
-        x2 = this.state.selection.x1;
-      }
-
-      if (y1 > y2) {
-        y1 = y2;
-        y2 = this.state.selection.y1;
-      }
-
-      this.setState({
-        selection: {x1: this.state.selection.x1, y1: this.state.selection.y1, x2: mousePos.x, y2: mousePos.y}
-      });
-
-      let width = x2 - x1;
-      let height = y2 - y1;
-
-      if (width >= 0 && height >= 0) {
-        let imageData = this.selectionContext.getImageData(
-          x1,
-          y1,
-          width+1,
-          height+1,
-        )
-
-        let selectionCtx = this.refs.selectionCanvas.getContext("2d");
-        selectionCtx.clearRect(0, 0, 100, 100);
-
-        ctx.putImageData(this.imageData, 0, 0)
-        multiplyPixels(ctx, 0.5)
-        ctx.putImageData(imageData, x1, y1)
-        selectionCtx.putImageData(imageData,0,0);
-      }
-    } else {
-      let mousePos = getMousePos(ctx, evt);
-
-      this.setState({
-        currentMousePosition: mousePos
-      });
-
-      if (this.state.hovering) {
-        // multiplyPixel(ctx, this.state.currentMousePosition.x, this.state.currentMousePosition.y, 2)
-      } else {
-        multiplyPixels(ctx, 0.5)
-        this.setState({
-          hovering: true
-        });
-      }
-    }
-  }
-
-  mouseOut = (ctx, evt) => {
-    if (this.state.dragging) {
-      this.mouseUp(ctx, evt);
-    }
-
+  setMousePos = (pixel) => {
     this.setState({
-      currentMousePosition: {x:0, y:0}
-    })
-
-    if (this.state.hovering) {
-      ctx.putImageData(this.imageData, 0, 0);
-      this.setState({
-        hovering: false
-      });
-    }
-  }
-
-  mouseDown = (ctx, evt) => {
-    // Return canvas to original brightness.
-    ctx.putImageData(this.imageData, 0,0)
-
-    this.selectionCanvas = document.createElement("canvas");
-    this.selectionCanvas.width = WIDTH;
-    this.selectionCanvas.height = HEIGHT;
-    this.selectionContext = this.selectionCanvas.getContext("2d");
-    this.selectionContext.putImageData(this.imageData, 0, 0);
-
-    this.dragStartSound.play();
-    let mousePos = getMousePos(ctx, evt);
-    this.setState({
-      dragging: true,
-      selection: {
-        x1: mousePos.x,
-        y1: mousePos.y,
-        x2: mousePos.x,
-        y2: mousePos.y
-      }
+      currentMousePosition: pixel
     });
-
-    // Darken the canvas.
-    multiplyPixels(ctx, 0.50);
-    this.mouseMove(ctx,evt);
   }
 
-  mouseUp = (ctx, evt) => {
-    if (this.state.dragging) {
-      let mousePos = getMousePos(ctx, evt);
-      this.setState({
-        dragging: false,
-        selection: Object.assign({}, this.state.selection, {x2: mousePos.x, y2: mousePos.y})
-      });
+  selectPixel = async (pixel) => {
+    this.dragStopSound.play();
 
-      let width = mousePos.x - this.state.selection.x1;
-      let height = mousePos.y - this.state.selection.y1
+    this.state.selection.selected = false;
 
-      let selectionCtx = this.refs.selectionCanvas.getContext("2d");
-      selectionCtx.clearRect(0, 0, 100, 100);
+    this.setState({
+      selection: pixel,
+      selectedColor: pixel.color
+    })
 
-      if (width !== 0 && height !== 0) {
-        // Grab the selected region and put it in the selection preview.
-        let imageData = ctx.getImageData(
-          this.state.selection.x1,
-          this.state.selection.y1,
-          width,
-          height,
-        )
+    pixel.selected = true;
 
-        selectionCtx.putImageData(imageData,0,0);
+    await this.refreshPixel(pixel);
 
-        this.dragStopSound.play();
-      } else {
-        this.dragStopSound.play();
+    this.pixels = undefined; // force redraw
+
+    this.setState({
+      pixels: this.state.pixels
+    })
+  }
+
+  refreshPixel = async (pixel) => {
+    var {err, response} = await this.EVTWrapper.getToken("pixeltoken", pixel.id.toString());
+    if (err != null && err.name === "tokendb_key_not_found") {
+      pixel.available = true;
+      pixel.color = "#000";
+    } else if (err === null) {
+      let colorMetas = response.metas
+                      .filter(meta => meta.key.startsWith("color"))
+                      .sort((a, b) => {
+                        let bN = parseInt(b.key.replace("color", ""));
+                        let aN = parseInt(a.key.replace("color", ""));
+                        if (isNaN(bN)) {
+                          return -1;
+                        }
+                        return bN - aN;
+                      });
+
+      pixel.owner = response.owner[0];
+
+      if (colorMetas[0]) {
+        pixel.color = colorMetas[0].value;
       }
     }
   }
 
-  selectedPixels = () => {
+  initializePixels = () => {
     var pixels = [];
 
-    var x1 = this.state.selection.x1;
-    var y1 = this.state.selection.y1;
-    var x2 = this.state.selection.x2;
-    var y2 = this.state.selection.y2;
-
-    if (x1 > x2) {
-      x1 = x2;
-      x2 = this.state.selection.x1;
-    }
-
-    if (y1 > y2) {
-      y1 = y2;
-      y2 = this.state.selection.y1;
-    }
-
-    for (var y = y1; y <= y2; y++) {
-      for (var x = x1; x <= x2; x++) {
-        pixels.push((y*(WIDTH))+x)
+    for(var y = 0; y < HEIGHT; y += 1) {
+      for(var x = 0; x < WIDTH; x += 1) {
+        var pixel = {x, y, color: "#000", id: ((y*WIDTH)+x).toString() };
+        pixels.push(pixel);
       }
     }
 
     return pixels;
   }
 
-  rowRenderer = ({
-    key,         // Unique key within array of rows
-    index,       // Index of row within collection
-    isScrolling, // The List is currently being scrolled
-    isVisible,   // This row is visible within the List (eg it is not an overscanned row)
-    style        // Style object to be applied to row (to position it)
-  }) => {
-    return (
-      <div
-        key={key}
-        style={style}
-      >
-        Pixel #{this.selectedPixels()[index]}
-      </div>
-    )
+  claimPixel = async (pixel) => {
+    let response = await fetch(SERVERURL + '/claim', {
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({"id": pixel.id, "owner": this.EVTWrapper.publicKey}),
+      method: "POST"
+    });
+
+    let body = await response.text();
+
+    if (response.status === 201) {
+      await this.refreshPixel(pixel);
+
+      this.pixels = undefined; // force redraw
+
+      this.setState({
+        pixels: this.state.pixels
+      })
+    }
+  }
+
+  selectColor = async (color) => {
+    this.state.selection.color = color;
+    this.pixels = undefined; // force redraw
+    this.setState({
+      selectedColor: color
+    });
+
+
+    var {err, response} = this.commitColor(color, this.state.selection.id);
+    if (err !== null) {
+      // Unable to set the color.
+    }
+  }
+
+  commitColor = async (color, pixelID) => {
+    var {err, response} = await this.EVTWrapper.getToken("pixeltoken", pixelID);
+    if (err !== null) {
+      return {err, response}
+    }
+
+    let colorMetas = response.metas
+                    .filter(meta => meta.key.startsWith("color"))
+                    .map(meta => parseInt(meta.key.replace("color", "")))
+                    .filter(index => !isNaN(index))
+                    .sort((a, b) => b - a);
+
+    let nextColorIndex = isNaN(colorMetas[0]+1) ? 0 : colorMetas[0]+1;
+
+    var {err, response} = await this.EVTWrapper.addMeta("pixeltoken", this.state.selection.id, 'color'+nextColorIndex, color);
+    if (err != null) {
+      // Error setting meta.
+    }
+
+    // Let hte server refresh it's state too.
+    await fetch(SERVERURL + '/board/'+pixelID.toString(), {
+      headers: {
+        "Content-Type": "application/json"
+      },
+      method: "GET"
+    });
+
+    return {err, response}
+  }
+
+  handleLogin = (privateKey) => {
+    this.EVTWrapper = new EVTWrapper({privateKey});
+    localStorage.setItem('login', privateKey);
+    this.forceUpdate();
+  }
+
+  handleLogout = () => {
+    this.EVTWrapper = new EVTWrapper({});
+    localStorage.removeItem('login');
+    this.forceUpdate();
   }
 
   render() {
+    this.pixels = this.pixels || this.state.pixels.map((pixel) => {
+      return <div
+        className={'pixel' + (pixel.selected ? ' selected' : '')}
+        key={pixel.id}
+        style={{
+          backgroundColor: pixel.color,
+          width:SCALE+"px",
+          height: SCALE+"px",
+          float: "left",
+          color: pixel.color,
+          fontSize: "14px"
+        }}
+        onMouseEnter={this.setMousePos.bind(this,pixel)}
+        onClick={this.selectPixel.bind(this,pixel)}
+      ></div>
+    });
+
+
     return <div className="main">
-      <div className="header">
-        <h1>everi<span>Pixel</span></h1>
+      <Header
+        onLogin={this.handleLogin}
+        onLogout={this.handleLogout}
+        loggedIn={truncate(this.EVTWrapper.publicKey, 25, "...")}
+        EVTWrapper={this.EVTWrapper}
+      />
+
+      <div className="pixels">
+        {
+          this.pixels
+        }
         <style jsx>
           {`
-            h1 {
-              color: #858585;
-              font-size: 24px;
-              margin: 0;
-            }
-
-            h1 span {
-              color: #fff
-            }
-
-            .header {
-              border-bottom: 1px solid #222222;
-              padding: 20px;
-              margin-bottom: 20px;
+            .pixels {
+              float: left;
+              margin-right: 10px;
+              width: ${SCALE * WIDTH}px;
+              border: 1px solid #222;
+              margin-left: 20px;
             }
           `}
         </style>
       </div>
 
-      <Canvas
-        width={WIDTH}
-        height={HEIGHT}
-        onReady={this.canvasReady}
-        onMouseOut={this.mouseOut}
-        onMouseMove={this.mouseMove}
-        onMouseDown={this.mouseDown}
-        onMouseUp={this.mouseUp}
-        scale={SCALE}
-      />
-
       <div className="controls">
-        <div className="selection">
-          <div className="selectionPreview">
-            <canvas width="100px" height="100px" ref="selectionCanvas"></canvas>
-          </div>
+        <div className={"selection" + (this.state.selection.x !== undefined ? " selected" : "")} >
+
           <h2>
             {
-              (this.state.selection.x1 !== undefined) ?
+              (this.state.selection.x !== undefined) ?
               <div>
-              Selection&nbsp;
-              <span onClick={this.clearSelection}>[ESC]</span>
+                Pixel #{this.state.selection.id}
               </div>
               :
-              "No selection"
+              <span>Pixel #{this.state.currentMousePosition.id}&nbsp;</span>
             }
           </h2>
           {
-            (this.state.selection.x1 !== undefined) ?
-              (this.state.selection.x1 === this.state.selection.x2 && this.state.selection.y1 == this.state.selection.y2) ?
-                <div>({this.state.selection.x1},{this.state.selection.y1})</div>
+            (this.state.selection.x !== undefined) ?
+              <div>({this.state.selection.x},{this.state.selection.y})</div>
               :
-              <div>({this.state.selection.x1},{this.state.selection.y1}) to ({this.state.selection.x2},{this.state.selection.y2})</div>
-            :
             <div>({this.state.currentMousePosition.x},{this.state.currentMousePosition.y})</div>
           }
-        </div>
-        <hr/>
-        <div className="pixelList">
+
           {
-            this.state.dragging ? "" :   <List
-            width={300}
-            height={300}
-            rowCount={this.selectedPixels().length}
-            rowHeight={20}
-            rowRenderer={this.rowRenderer} />
+            (this.state.selection.x !== undefined) ?
+            <div className="owner">
+              <br/>
+              <span>
+                {
+                  this.state.selection.owner === undefined ?
+                    <div>
+
+                    </div>
+                    :
+                    "Owner: " + truncate(this.state.selection.owner, 25, "...")
+                }
+              </span>
+            </div>
+            :
+            ''
           }
         </div>
 
+        <hr/>
+        {
+          this.state.selection.color ?
+            this.state.selection.owner === undefined ?
+              <div className="detail-box">
+                <h2>Nobody owns this pixel yet!</h2>
+                <p>You can claim it for yourself and set it to any color you want!</p>
+                <p>You'll be the true owner of this little pixel, nobody can take it from you.</p>
+
+                {
+                  this.EVTWrapper.publicKey ?
+                    <button className="primary" onClick={this.claimPixel.bind(this, this.state.selection)}>CLAIM PIXEL</button>
+                  :
+                    <div>Click login above or create account to claim this pixel!<br/><br/></div>
+                }
+
+                <button className="secondary" onClick={this.clearSelection}>DESELECT [ESC]</button>
+              </div>
+            :
+              this.state.selection.owner === this.EVTWrapper.publicKey ?
+                <div>
+                  You own this pixel!
+                  <div className="palette">
+                    {PALETTE.map((color) => {
+                      var className = 'color-picker';
+                      if (color === this.state.selectedColor) {
+                        className += ' selected'
+                      }
+                      return <div key={color} className={className} style={{backgroundColor:color}} onClick={this.selectColor.bind(this, color)}></div>
+                    })}
+                  </div>
+                </div>
+              :
+                <div>
+                  {this.EVTWrapper.publicKey ? "Someone else owns this pixel." : "You are not logged in"} <br /><br />
+                  <button className="secondary" onClick={this.clearSelection}>DESELECT [ESC]</button>
+                </div>
+          :
+          ""
+        }
 
         <style jsx>
           {`
@@ -376,22 +397,11 @@ export class Index extends Component {
               float: left;
               color: #fff;
               font-size: 16px;
-              width: 320px;
+              width: 400px;
             }
 
-            .pixelList {
-              height: 600px;
-              overflow-y: scroll;
-            }
-
-            .pixelList::-webkit-scrollbar {
-              width:10px; // manage scrollbar width here
-            }
-            .pixelList::-webkit-scrollbar * {
-              background: #222; // manage scrollbar background color here
-            }
-            .pixelList::-webkit-scrollbar-thumb {
-              background:rgba(50,50,50,1) !important; // manage scrollbar thumb background color here
+            .selected {
+              color: #fff !important
             }
 
             .selectionPreview {
@@ -403,8 +413,30 @@ export class Index extends Component {
               margin-bottom: 10px;
             }
 
-            h2 {
+            .color-picker {
+              width: 20px;
+              height: 20px;
+              float: left;
+              display: box;
+              cursor: pointer;
+              margin-right: 2px;
+              opacity: 0.8;
+            }
+
+            .color-picker:hover, .color-picker.selected {
+              border-bottom: 4px solid #fff;
+              opacity: 1;
+            }
+
+            .palette {
+              margin-top: 10px
+            }
+
+            .selection {
               color: #858585;
+            }
+
+            h2 {
               font-size: 16px;
               margin: 0;
               margin-bottom: 10px;
@@ -413,6 +445,19 @@ export class Index extends Component {
             hr {
               clear: both;
               border-color: #222
+            }
+
+            .owner span {
+
+            }
+
+            .detail-box {
+              font-family: system, -apple-system, system-ui;
+              color: #aaa;
+            }
+
+            .detail-box h2 {
+              color: #fff
             }
           `}
         </style>
