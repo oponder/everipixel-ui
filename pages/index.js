@@ -13,8 +13,15 @@ const WIDTH = 50;
 const HEIGHT = 50;
 const SCALE = 10;
 
+const UNKNOWN_TOKEN_EXCEPTION = 3040201;
+
+// Production
 const SERVERURL = "http://35.240.173.157:8000"
 const EVTIP = "35.240.176.101"
+
+// Dev
+// const SERVERURL = "http://127.0.0.1:8000"
+// const EVTIP = "127.0.0.1"
 
 const PALETTE = [
                  '#FFFFFF', '#E4E4E4', '#888888', '#222222',
@@ -50,7 +57,9 @@ export class Index extends Component {
       this.dragFailSound = new Pizzicato.Sound("/static/dragfail.mp3");
     }
 
-    this.EVTWrapper = new EVTWrapper({});
+    this.EVTWrapper = new EVTWrapper({
+      host: EVTIP,
+    });
 
     this.state = {
       dragging: false,
@@ -152,7 +161,8 @@ export class Index extends Component {
 
   refreshPixel = async (pixel) => {
     var {err, response} = await this.EVTWrapper.getToken("pixeltoken", pixel.id.toString());
-    if (err != null && err.name === "tokendb_key_not_found") {
+
+    if (err != null && err.code === UNKNOWN_TOKEN_EXCEPTION) {
       pixel.available = true;
       pixel.color = "#000";
     } else if (err === null) {
