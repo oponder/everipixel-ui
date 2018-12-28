@@ -92,6 +92,9 @@ export default function Header(props) {
   }
 
   return <div className="header">
+    <div className="hackathon">
+      <img src="/static/everitoken-logo-dark.png" />
+    </div>
     <h1>everi<span>Pixel</span></h1>
 
     <div className="user pullRight">
@@ -141,6 +144,20 @@ export default function Header(props) {
 
         h1 span {
           color: #fff
+        }
+
+        .hackathon {
+          text-align: right;
+          height: 30px;
+          margin-bottom: 40px;
+          color: #fff;
+          font-size: 15px;
+        }
+
+        .hackathon img {
+          width: 150px;
+          position: relative;
+          top: 8px
         }
       `}
     </style>

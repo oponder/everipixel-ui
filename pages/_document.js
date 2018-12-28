@@ -187,6 +187,19 @@ export default class MyDocument extends Document {
               margin-top: 40px;
             }
 
+            .poweredBy {
+              margin-top: 80px;
+              text-align: center;
+              color: #d3d4d4;
+              font-size: 13px;
+            }
+
+            .poweredBy img {
+              height: 20px;
+              position: relative;
+              top: 5px;
+            }
+
             `}
           </style>
         </Head>
@@ -194,6 +207,9 @@ export default class MyDocument extends Document {
           <Main />
           <NextScript />
           <div className="clear"></div>
+          <div className="poweredBy">
+            powered by everiToken public blockchain
+          </div>
         </body>
       </html>
     )
