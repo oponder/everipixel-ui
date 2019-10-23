@@ -1,4 +1,4 @@
-everiPixel
+everiPixel-UI
 ==========
 
 This is a fun application of everiToken's `Non Fungible Token` feature.
@@ -6,8 +6,17 @@ A canvas of pixels is presented to the user, and each pixel is represented by
 a single NFT. Changes to pixels are recorded forever in the blockchain, and
 people can actually own the pixel and transfer it.
 
-## Usage
+## Archived
 
+This project has been "Archived". I am no longer working on it actively.
+
+It used to be deployed automatically to a Kubernetes cluster on Google Cloud
+through Cloud Build triggers for the `oponder/everipixel-server` and `oponder/everipixel-ui` repos.
+
+That has all been disabled now and only a static version of the site is running,
+using github pages for hosting.
+
+## Usage
 
 evtd must be running:
 

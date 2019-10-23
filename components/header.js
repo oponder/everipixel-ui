@@ -6,18 +6,17 @@ export default function Header(props) {
   let [createAccountToggle, setCreateAccountToggle] = useState(false);
   let [createAccountPage, setCreateAccountPage] = useState(0);
   let [loginToggle, setLoginToggle] = useState(false);
+  let [archiveNoticeToggle, setArchiveNoticeToggle] = useState(false);
   let [copied, setCopied] = useState(false);
 
+
+
   function toggleCreateAccount() {
-    setLoginToggle(false);
-    setCreateAccountPage(0);
-    setCopied(false);
-    setCreateAccountToggle(!createAccountToggle);
+    setArchiveNoticeToggle(!archiveNoticeToggle);
   }
 
   function toggleLogin() {
-    setCreateAccountToggle(false);
-    setLoginToggle(!loginToggle);
+    setArchiveNoticeToggle(!archiveNoticeToggle);
   }
 
   function advanceCreateAccount() {
@@ -95,7 +94,7 @@ export default function Header(props) {
     <div className="hackathon">
       <img src="/static/everitoken-logo-dark.png" />
     </div>
-    <h1>everi<span>Pixel</span></h1>
+    <h1>everi<span>Pixel</span> (<i>ARCHIVED</i>)</h1>
 
     <div className="user pullRight">
 
@@ -127,6 +126,19 @@ export default function Header(props) {
             {
               showCreateAccountPage(createAccountPage)
             }
+          </div>
+        :
+          undefined
+      }
+
+      {
+        archiveNoticeToggle ?
+          <div className="createAccount overlayWindow">
+            <h3>Everipixel has been archived</h3>
+            It's no longer possible to login or create an account.
+            Thanks for visiting!
+
+            You can find out more about everipixel at <a href="https://blog.oliverponder.com">blog.oliverponder.com</a>
           </div>
         :
           undefined
