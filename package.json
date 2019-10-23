@@ -21,7 +21,8 @@
     "react-dom": "^16.7.0-alpha",
     "react-virtualized": "^9.20.1",
     "socket.io-client": "^2.1.1",
-    "copy-to-clipboard": "~3.0.8"
+    "copy-to-clipboard": "~3.0.8",
+    "mem": "4.0.0"
   },
   "devDependencies": {
     "eslint": "^5.7.0",
