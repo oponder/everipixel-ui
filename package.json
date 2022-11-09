@@ -15,7 +15,7 @@
     "@feathersjs/feathers": "^3.2.3",
     "@feathersjs/socketio-client": "^1.1.5",
     "evtjs": "^4.4.4",
-    "next": "^7.0.2",
+    "next": "^13.0.2",
     "pizzicato": "^0.6.3",
     "react": "^16.7.0-alpha",
     "react-dom": "^16.7.0-alpha",
